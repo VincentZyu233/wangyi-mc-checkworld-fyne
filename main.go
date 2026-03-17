@@ -17,7 +17,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-var Version = "0.1.5"
+var Version = "0.1.6"
 
 type WorldInfo struct {
 	folder        string
@@ -154,15 +154,14 @@ func createListPanel(win fyne.Window) *fyne.Container {
 		func() int { return len(worlds) },
 		func() fyne.CanvasObject {
 			return container.NewHBox(
-				container.NewVBox(
-					widget.NewLabel("World Name"),
-					widget.NewLabel("Folder: "),
-				),
+				widget.NewLabel("World Name"),
+				layout.NewSpacer(),
+				widget.NewLabel("Folder"),
+				layout.NewSpacer(),
 				widget.NewLabel("Size"),
-				container.NewVBox(
-					widget.NewButton("复制路径", nil),
-					widget.NewButton("打开文件夹", nil),
-				),
+				layout.NewSpacer(),
+				widget.NewButton("复制路径", nil),
+				widget.NewButton("打开文件夹", nil),
 			)
 		},
 		func(id widget.ListItemID, item fyne.CanvasObject) {
@@ -172,30 +171,40 @@ func createListPanel(win fyne.Window) *fyne.Container {
 			w := worlds[id]
 			hbox := item.(*fyne.Container)
 
-			vbox := hbox.Objects[0].(*fyne.Container)
-			nameLabel := vbox.Objects[0].(*widget.Label)
+			nameLabel := hbox.Objects[0].(*widget.Label)
 			nameLabel.SetText(w.name)
-			folderLabel := vbox.Objects[1].(*widget.Label)
-			folderLabel.SetText("文件夹: " + w.folder)
 
-			sizeLabel := hbox.Objects[1].(*widget.Label)
+			folderLabel := hbox.Objects[2].(*widget.Label)
+			folderLabel.SetText(w.folder)
+
+			sizeLabel := hbox.Objects[4].(*widget.Label)
 			sizeLabel.SetText(w.sizeFormatted)
 
-			btnBox := hbox.Objects[2].(*fyne.Container)
-			copyBtn := btnBox.Objects[0].(*widget.Button)
+			copyBtn := hbox.Objects[6].(*widget.Button)
 			copyBtn.OnTapped = func() {
 				win.Clipboard().SetContent(w.path)
 				statusLabel.SetText("已复制: " + w.path)
 			}
-			openBtn := btnBox.Objects[1].(*widget.Button)
+			openBtn := hbox.Objects[7].(*widget.Button)
 			openBtn.OnTapped = func() {
 				openFolder(w.path)
 			}
 		},
 	)
 
-	return container.NewBorder(
-		nil, nil, nil, nil,
+	header := container.NewHBox(
+		widget.NewLabel("世界名"),
+		layout.NewSpacer(),
+		widget.NewLabel("文件夹"),
+		layout.NewSpacer(),
+		widget.NewLabel("大小"),
+		layout.NewSpacer(),
+		layout.NewSpacer(),
+		layout.NewSpacer(),
+	)
+
+	return container.NewVBox(
+		header,
 		worldList,
 	)
 }

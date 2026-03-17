@@ -11,6 +11,7 @@ import subprocess
 import sys
 import re
 from pathlib import Path
+from typing import Union
 
 
 def get_version() -> str:
@@ -40,7 +41,7 @@ def run_go_mod_tidy(verbose: bool = False):
     print("\n[1/4] Running go mod tidy...")
     env = os.environ.copy()
     if verbose:
-        env['GOFLAGS'] = '-v'
+        env["GOFLAGS"] = "-v"
     result = subprocess.run(
         ["go", "mod", "tidy"],
         cwd=Path(__file__).parent,
@@ -55,25 +56,29 @@ def run_go_mod_tidy(verbose: bool = False):
 
 import platform
 
+
 def build_executable(version: str, proxy: str, verbose: bool = False):
     """Build Windows x64 executable"""
     print(f"\n[2/4] Building Windows x64 executable...")
 
     output_name = f"fyne-mc-world-manager-v{version}-windows-x64.exe"
+    dist_dir = Path(__file__).parent / "dist"
+    dist_dir.mkdir(exist_ok=True)
+    output_path = dist_dir / output_name
 
     env = os.environ.copy()
     if verbose:
-        env['GOFLAGS'] = '-v'
-    if platform.system() == 'Linux':
+        env["GOFLAGS"] = "-v"
+    if platform.system() == "Linux":
         # Cross-compiling from WSL/Linux
-        env['GOOS'] = 'windows'
-        env['GOARCH'] = 'amd64'
-        env['CGO_ENABLED'] = '1'
-        env['CC'] = 'x86_64-w64-mingw32-gcc'
+        env["GOOS"] = "windows"
+        env["GOARCH"] = "amd64"
+        env["CGO_ENABLED"] = "1"
+        env["CC"] = "x86_64-w64-mingw32-gcc"
         print("Cross-compiling for Windows from Linux/WSL")
     else:
         # Native build on Windows
-        env['CGO_ENABLED'] = '1'
+        env["CGO_ENABLED"] = "1"
         # Check gcc
         gcc_check = subprocess.run(
             ["gcc", "--version"],
@@ -94,7 +99,7 @@ def build_executable(version: str, proxy: str, verbose: bool = False):
         "-ldflags",
         f"-s -w -X main.Version={version}",
         "-o",
-        output_name,
+        str(output_path),
     ]
 
     result = subprocess.run(
@@ -110,14 +115,15 @@ def build_executable(version: str, proxy: str, verbose: bool = False):
         return None
 
     print(f"Build successful: {output_name}")
-    return output_name
+    return output_path
 
 
-def create_portable_zip(exe_name: str, version: str):
+def create_portable_zip(exe_name: Union[str, Path], version: str):
     """Create portable zip package"""
     print(f"\n[3/4] Creating portable zip...")
 
     zip_name = f"fyne-mc-world-manager-v{version}-windows-x64-green.zip"
+    dist_dir = Path(__file__).parent / "dist"
     temp_dir = Path(__file__).parent / "temp_portable"
     temp_dir.mkdir(exist_ok=True)
 
@@ -128,7 +134,7 @@ def create_portable_zip(exe_name: str, version: str):
         "zip",
         root_dir=temp_dir,
     ):
-        final_zip = Path(__file__).parent / zip_name
+        final_zip = dist_dir / zip_name
         if final_zip.exists():
             final_zip.unlink()
         shutil.move(str(temp_dir) + ".zip", final_zip)
@@ -141,9 +147,9 @@ def create_portable_zip(exe_name: str, version: str):
 def cleanup():
     """Clean up build artifacts"""
     print(f"\n[4/4] Cleaning up...")
-    for f in Path(__file__).parent.glob("*.exe"):
-        if f.name != "fyne-mc-world-manager.exe":
-            f.unlink()
+    dist_dir = Path(__file__).parent / "dist"
+    if dist_dir.exists():
+        shutil.rmtree(dist_dir)
     print("Cleanup complete")
 
 
@@ -164,7 +170,8 @@ def main():
         help="Version string (auto-detected from main.go if not provided)",
     )
     parser.add_argument(
-        "--verbose", "-v",
+        "--verbose",
+        "-v",
         action="store_true",
         help="Enable verbose output for Go commands",
     )

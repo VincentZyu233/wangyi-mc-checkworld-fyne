@@ -18,7 +18,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-var Version = "0.1.2"
+var Version = "0.1.3"
 
 type WorldInfo struct {
 	folder        string

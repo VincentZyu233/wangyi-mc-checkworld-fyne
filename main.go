@@ -17,7 +17,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-var Version = "0.1.8"
+var Version = "0.1.9"
 
 type WorldInfo struct {
 	folder        string
@@ -150,17 +150,28 @@ func openFolder(path string) {
 }
 
 func createListPanel(win fyne.Window) *fyne.Container {
+	template := container.NewHBox(
+		widget.NewLabel(""),
+		widget.NewLabel(""),
+		widget.NewLabel(""),
+		widget.NewLabel(""),
+		widget.NewLabel(""),
+	)
+
 	worldTable = widget.NewTable(
 		func() (int, int) { return len(worlds), 5 },
 		func() fyne.CanvasObject {
-			return widget.NewLabel("")
+			t := template.MinSize()
+			template.Resize(fyne.NewSize(t.Width, 30))
+			return template
 		},
 		func(id widget.TableCellID, cell fyne.CanvasObject) {
 			if id.Row >= len(worlds) {
 				return
 			}
 			w := worlds[id.Row]
-			label := cell.(*widget.Label)
+			hbox := cell.(*fyne.Container)
+			label := hbox.Objects[id.Col].(*widget.Label)
 			switch id.Col {
 			case 0:
 				label.SetText(w.name)
@@ -183,11 +194,11 @@ func createListPanel(win fyne.Window) *fyne.Container {
 
 	header := container.NewHBox(
 		widget.NewLabel("世界名"),
-		layout.NewSpacer(),
+		widget.NewLabel(""),
 		widget.NewLabel("文件夹"),
-		layout.NewSpacer(),
+		widget.NewLabel(""),
 		widget.NewLabel("大小"),
-		layout.NewSpacer(),
+		widget.NewLabel(""),
 		widget.NewLabel("操作"),
 		widget.NewLabel(""),
 	)

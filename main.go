@@ -17,7 +17,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-var Version = "0.1.6"
+var Version = "0.1.7"
 
 type WorldInfo struct {
 	folder        string
@@ -154,11 +154,11 @@ func createListPanel(win fyne.Window) *fyne.Container {
 		func() int { return len(worlds) },
 		func() fyne.CanvasObject {
 			return container.NewHBox(
-				widget.NewLabel("World Name"),
+				widget.NewLabel(""),
 				layout.NewSpacer(),
-				widget.NewLabel("Folder"),
+				widget.NewLabel(""),
 				layout.NewSpacer(),
-				widget.NewLabel("Size"),
+				widget.NewLabel(""),
 				layout.NewSpacer(),
 				widget.NewButton("复制路径", nil),
 				widget.NewButton("打开文件夹", nil),
@@ -199,8 +199,8 @@ func createListPanel(win fyne.Window) *fyne.Container {
 		layout.NewSpacer(),
 		widget.NewLabel("大小"),
 		layout.NewSpacer(),
-		layout.NewSpacer(),
-		layout.NewSpacer(),
+		widget.NewLabel(""),
+		widget.NewLabel(""),
 	)
 
 	return container.NewVBox(

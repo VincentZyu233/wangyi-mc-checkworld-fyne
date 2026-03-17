@@ -12,13 +12,12 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
-var Version = "0.1.3"
+var Version = "0.1.5"
 
 type WorldInfo struct {
 	folder        string
@@ -154,11 +153,15 @@ func createListPanel(win fyne.Window) *fyne.Container {
 	worldList = widget.NewList(
 		func() int { return len(worlds) },
 		func() fyne.CanvasObject {
-			return container.NewVBox(
-				widget.NewLabel("World Name"),
-				container.NewHBox(
+			return container.NewHBox(
+				container.NewVBox(
+					widget.NewLabel("World Name"),
 					widget.NewLabel("Folder: "),
-					widget.NewLabel("path"),
+				),
+				widget.NewLabel("Size"),
+				container.NewVBox(
+					widget.NewButton("复制路径", nil),
+					widget.NewButton("打开文件夹", nil),
 				),
 			)
 		},
@@ -167,26 +170,29 @@ func createListPanel(win fyne.Window) *fyne.Container {
 				return
 			}
 			w := worlds[id]
-			vbox := item.(*fyne.Container)
-			label := vbox.Objects[0].(*widget.Label)
-			label.SetText(w.name)
-			hbox := vbox.Objects[1].(*fyne.Container)
-			folderLabel := hbox.Objects[0].(*widget.Label)
-			folderLabel.Text = "文件夹: "
-			pathLabel := hbox.Objects[1].(*widget.Label)
-			pathLabel.Text = w.folder
+			hbox := item.(*fyne.Container)
+
+			vbox := hbox.Objects[0].(*fyne.Container)
+			nameLabel := vbox.Objects[0].(*widget.Label)
+			nameLabel.SetText(w.name)
+			folderLabel := vbox.Objects[1].(*widget.Label)
+			folderLabel.SetText("文件夹: " + w.folder)
+
+			sizeLabel := hbox.Objects[1].(*widget.Label)
+			sizeLabel.SetText(w.sizeFormatted)
+
+			btnBox := hbox.Objects[2].(*fyne.Container)
+			copyBtn := btnBox.Objects[0].(*widget.Button)
+			copyBtn.OnTapped = func() {
+				win.Clipboard().SetContent(w.path)
+				statusLabel.SetText("已复制: " + w.path)
+			}
+			openBtn := btnBox.Objects[1].(*widget.Button)
+			openBtn.OnTapped = func() {
+				openFolder(w.path)
+			}
 		},
 	)
-
-	worldList.OnSelected = func(id widget.ListItemID) {
-		if id >= 0 && id < len(worlds) {
-			w := worlds[id]
-			dialog.ShowInformation("存档信息",
-				fmt.Sprintf("文件夹: %s\n世界名: %s\n大小: %s\n路径: %s",
-					w.folder, w.name, w.sizeFormatted, w.path),
-				win)
-		}
-	}
 
 	return container.NewBorder(
 		nil, nil, nil, nil,

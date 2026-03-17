@@ -118,16 +118,17 @@ def build_executable(version: str, proxy: str, verbose: bool = False):
     return output_path
 
 
-def create_portable_zip(exe_name: Union[str, Path], version: str):
+def create_portable_zip(exe_path: Union[str, Path], version: str):
     """Create portable zip package"""
     print(f"\n[3/4] Creating portable zip...")
 
+    exe_path = Path(exe_path)
     zip_name = f"fyne-mc-world-manager-v{version}-windows-x64-green.zip"
     dist_dir = Path(__file__).parent / "dist"
     temp_dir = Path(__file__).parent / "temp_portable"
     temp_dir.mkdir(exist_ok=True)
 
-    shutil.copy2(exe_name, temp_dir / exe_name)
+    shutil.copy2(exe_path, temp_dir / exe_path.name)
 
     if shutil.make_archive(
         str(temp_dir),

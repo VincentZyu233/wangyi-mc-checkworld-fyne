@@ -17,7 +17,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-var Version = "0.1.7"
+var Version = "0.1.8"
 
 type WorldInfo struct {
 	folder        string
@@ -29,7 +29,7 @@ type WorldInfo struct {
 }
 
 var worlds []WorldInfo
-var worldList *widget.List
+var worldTable *widget.Table
 var searchEntry *widget.Entry
 var statusLabel *widget.Label
 
@@ -150,47 +150,36 @@ func openFolder(path string) {
 }
 
 func createListPanel(win fyne.Window) *fyne.Container {
-	worldList = widget.NewList(
-		func() int { return len(worlds) },
+	worldTable = widget.NewTable(
+		func() (int, int) { return len(worlds), 5 },
 		func() fyne.CanvasObject {
-			return container.NewHBox(
-				widget.NewLabel(""),
-				layout.NewSpacer(),
-				widget.NewLabel(""),
-				layout.NewSpacer(),
-				widget.NewLabel(""),
-				layout.NewSpacer(),
-				widget.NewButton("复制路径", nil),
-				widget.NewButton("打开文件夹", nil),
-			)
+			return widget.NewLabel("")
 		},
-		func(id widget.ListItemID, item fyne.CanvasObject) {
-			if id >= len(worlds) {
+		func(id widget.TableCellID, cell fyne.CanvasObject) {
+			if id.Row >= len(worlds) {
 				return
 			}
-			w := worlds[id]
-			hbox := item.(*fyne.Container)
-
-			nameLabel := hbox.Objects[0].(*widget.Label)
-			nameLabel.SetText(w.name)
-
-			folderLabel := hbox.Objects[2].(*widget.Label)
-			folderLabel.SetText(w.folder)
-
-			sizeLabel := hbox.Objects[4].(*widget.Label)
-			sizeLabel.SetText(w.sizeFormatted)
-
-			copyBtn := hbox.Objects[6].(*widget.Button)
-			copyBtn.OnTapped = func() {
-				win.Clipboard().SetContent(w.path)
-				statusLabel.SetText("已复制: " + w.path)
-			}
-			openBtn := hbox.Objects[7].(*widget.Button)
-			openBtn.OnTapped = func() {
-				openFolder(w.path)
+			w := worlds[id.Row]
+			label := cell.(*widget.Label)
+			switch id.Col {
+			case 0:
+				label.SetText(w.name)
+			case 1:
+				label.SetText(w.folder)
+			case 2:
+				label.SetText(w.sizeFormatted)
+			case 3:
+				label.SetText("📋")
+			case 4:
+				label.SetText("📁")
 			}
 		},
 	)
+	worldTable.SetColumnWidth(0, 200)
+	worldTable.SetColumnWidth(1, 150)
+	worldTable.SetColumnWidth(2, 80)
+	worldTable.SetColumnWidth(3, 40)
+	worldTable.SetColumnWidth(4, 40)
 
 	header := container.NewHBox(
 		widget.NewLabel("世界名"),
@@ -199,13 +188,13 @@ func createListPanel(win fyne.Window) *fyne.Container {
 		layout.NewSpacer(),
 		widget.NewLabel("大小"),
 		layout.NewSpacer(),
-		widget.NewLabel(""),
+		widget.NewLabel("操作"),
 		widget.NewLabel(""),
 	)
 
 	return container.NewVBox(
 		header,
-		worldList,
+		worldTable,
 	)
 }
 
@@ -216,7 +205,6 @@ func createToolbar() *widget.Toolbar {
 				statusLabel.SetText("错误: " + err.Error())
 			} else {
 				statusLabel.SetText(fmt.Sprintf("共 %d 个存档", len(worlds)))
-				worldList.Refresh()
 			}
 		}),
 		widget.NewToolbarAction(theme.FolderOpenIcon(), func() {

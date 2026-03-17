@@ -1,0 +1,155 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    name: Check triggers
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+      should_release: ${{ steps.check.outputs.should_release }}
+      clear_cache: ${{ steps.check.outputs.clear_cache }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version from main.go
+        id: version
+        run: |
+          VERSION=$(grep -oP 'Version\s*=\s*"\K[^"]+' main.go)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Version: $VERSION"
+
+      - name: Check commit message for triggers
+        id: check
+        run: |
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          echo "Commit message: $COMMIT_MSG"
+          
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "should_release=false" >> $GITHUB_OUTPUT
+            echo "clear_cache=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          if echo "$COMMIT_MSG" | grep -qi "build release"; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          elif echo "$COMMIT_MSG" | grep -qi "build action"; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "should_build=false" >> $GITHUB_OUTPUT
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          fi
+          
+          if echo "$COMMIT_MSG" | grep -qi "\-\-clear"; then
+            echo "clear_cache=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Cache will be cleared for this build"
+          else
+            echo "clear_cache=false" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    name: Build Windows x64
+    needs: check
+    if: needs.check.outputs.should_build == 'true'
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Cache Go modules
+        if: needs.check.outputs.clear_cache != 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-mod-
+
+      - name: Clear cache notice
+        if: needs.check.outputs.clear_cache == 'true'
+        run: echo "🧹 Building without cache (--clear flag detected)"
+
+      - name: Build Go application
+        run: |
+          $env:GOOS = "windows"
+          $env:GOARCH = "amd64"
+          go build -ldflags "-s -w -X main.Version=${{ needs.check.outputs.version }}" -o fyne-mc-world-manager.exe
+
+      - name: Prepare release package
+        shell: bash
+        run: |
+          VERSION="${{ needs.check.outputs.version }}"
+          mkdir -p release
+          mkdir -p release-portable
+          
+          cp fyne-mc-world-manager.exe release/fyne-mc-world-manager-v${VERSION}-windows-x64.exe
+          cp fyne-mc-world-manager.exe release-portable/fyne-mc-world-manager-v${VERSION}-windows-x64.exe
+
+      - name: Upload exe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fyne-mc-world-manager-v${{ needs.check.outputs.version }}-windows-x64-exe
+          path: release/fyne-mc-world-manager-v${{ needs.check.outputs.version }}-windows-x64.exe
+
+  release:
+    name: Publish Release
+    needs: [check, build]
+    if: needs.check.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List downloaded files
+        run: find artifacts -type f
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.check.outputs.version }}
+          name: Release v${{ needs.check.outputs.version }}
+          body: |
+            ## fyne-mc-world-manager v${{ needs.check.outputs.version }}
+            
+            ### 📦 下载说明
+            - **exe**: 便携版，直接运行即可
+            
+            ### ✨ 功能
+            - 📂 列出所有网易 MC 存档
+            - 🔍 搜索和排序
+            - 💾 备份存档
+            - 🗑️ 删除存档
+            
+            ### 🖥️ 系统要求
+            - Windows 10/11 x64
+          files: |
+            artifacts/fyne-mc-world-manager-v${{ needs.check.outputs.version }}-windows-x64-exe/*.exe
+          draft: false
+          prerelease: false

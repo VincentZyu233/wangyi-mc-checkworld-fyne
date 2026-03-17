@@ -150,7 +150,7 @@ func openFolder(path string) {
 	execCmd.Start()
 }
 
-func createListPanel() *fyne.Container {
+func createListPanel(win fyne.Window) *fyne.Container {
 	worldList = widget.NewList(
 		func() int { return len(worlds) },
 		func() fyne.CanvasObject {
@@ -184,7 +184,7 @@ func createListPanel() *fyne.Container {
 			dialog.ShowInformation("存档信息",
 				fmt.Sprintf("文件夹: %s\n世界名: %s\n大小: %s\n路径: %s",
 					w.folder, w.name, w.sizeFormatted, w.path),
-				fyne.CurrentApp().MainWindow())
+				win)
 		}
 	}
 
@@ -194,7 +194,7 @@ func createListPanel() *fyne.Container {
 	)
 }
 
-func createToolbar() *fyne.Toolbar {
+func createToolbar() *widget.Toolbar {
 	return widget.NewToolbar(
 		widget.NewToolbarAction(theme.ViewRefreshIcon(), func() {
 			if err := loadWorlds(); err != nil {
@@ -221,7 +221,7 @@ func createStatusBar() *fyne.Container {
 
 func main() {
 	a := app.New()
-	a.SetTheme(theme.DarkTheme())
+	a.Settings().SetTheme(theme.DarkTheme())
 
 	w := a.NewWindow("网易MC存档管理 - Fyne")
 	w.Resize(fyne.NewSize(900, 600))
@@ -231,7 +231,7 @@ func main() {
 	}
 
 	toolbar := createToolbar()
-	worldListContainer := createListPanel()
+	worldListContainer := createListPanel(w)
 	statusBar := createStatusBar()
 
 	mainContent := container.NewBorder(

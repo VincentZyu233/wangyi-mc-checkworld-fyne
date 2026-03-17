@@ -35,27 +35,58 @@ def set_proxy(proxy: str):
         print(f"Using proxy: {proxy}")
 
 
-def run_go_mod_tidy():
+def run_go_mod_tidy(verbose: bool = False):
     """Run go mod tidy to download dependencies"""
     print("\n[1/4] Running go mod tidy...")
+    env = os.environ.copy()
+    if verbose:
+        env['GOFLAGS'] = '-v'
     result = subprocess.run(
         ["go", "mod", "tidy"],
-        capture_output=True,
-        text=True,
         cwd=Path(__file__).parent,
+        env=env,
     )
     if result.returncode != 0:
-        print(f"Error: {result.stderr}")
+        print(f"Error: go mod tidy failed with code {result.returncode}")
         return False
     print("Dependencies downloaded successfully")
     return True
 
 
-def build_executable(version: str, proxy: str):
+import platform
+
+def build_executable(version: str, proxy: str, verbose: bool = False):
     """Build Windows x64 executable"""
     print(f"\n[2/4] Building Windows x64 executable...")
 
     output_name = f"fyne-mc-world-manager-v{version}-windows-x64.exe"
+
+    env = os.environ.copy()
+    if verbose:
+        env['GOFLAGS'] = '-v'
+    if platform.system() == 'Linux':
+        # Cross-compiling from WSL/Linux
+        env['GOOS'] = 'windows'
+        env['GOARCH'] = 'amd64'
+        env['CGO_ENABLED'] = '1'
+        env['CC'] = 'x86_64-w64-mingw32-gcc'
+        print("Cross-compiling for Windows from Linux/WSL")
+    else:
+        # Native build on Windows
+        env['CGO_ENABLED'] = '1'
+        # Check gcc
+        gcc_check = subprocess.run(
+            ["gcc", "--version"],
+            capture_output=True,
+            text=True,
+        )
+        if gcc_check.returncode != 0:
+            print("Error: C compiler 'gcc' not found.")
+            print("Please install MinGW:")
+            print("  - Download from https://www.mingw-w64.org/")
+            print("  - Install to: D:\\SSoftwareFiles\\winget")
+            print("  - Add to PATH: D:\\SSoftwareFiles\\winget\\bin")
+            return None
 
     build_args = [
         "go",
@@ -71,6 +102,7 @@ def build_executable(version: str, proxy: str):
         capture_output=True,
         text=True,
         cwd=Path(__file__).parent,
+        env=env,
     )
 
     if result.returncode != 0:
@@ -131,11 +163,18 @@ def main():
         default="",
         help="Version string (auto-detected from main.go if not provided)",
     )
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        help="Enable verbose output for Go commands",
+    )
     args = parser.parse_args()
 
     version = args.version
     if not version:
         version = get_version()
+
+    verbose = args.verbose
 
     print(f"Building fyne-mc-world-manager v{version} for Windows x64")
 
@@ -147,10 +186,10 @@ def main():
         if env_proxy:
             print(f"Using proxy from environment: {env_proxy}")
 
-    if not run_go_mod_tidy():
+    if not run_go_mod_tidy(verbose):
         sys.exit(1)
 
-    exe_name = build_executable(version, proxy)
+    exe_name = build_executable(version, proxy, verbose)
     if not exe_name:
         sys.exit(1)
 

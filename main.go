@@ -18,7 +18,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-var Version = "0.1.0"
+var Version = "0.1.1"
 
 type WorldInfo struct {
 	folder        string
@@ -229,6 +229,9 @@ func main() {
 	if err := loadWorlds(); err != nil {
 		fmt.Fprintf(os.Stderr, "加载存档失败: %v\n", err)
 	}
+
+	searchEntry = widget.NewEntry()
+	searchEntry.SetPlaceHolder("搜索存档...")
 
 	toolbar := createToolbar()
 	worldListContainer := createListPanel(w)

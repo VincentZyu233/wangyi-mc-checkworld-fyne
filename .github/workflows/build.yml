@@ -97,23 +97,22 @@ jobs:
         run: |
           $env:GOOS = "windows"
           $env:GOARCH = "amd64"
-          go build -ldflags "-s -w -X main.Version=${{ needs.check.outputs.version }}" -o fyne-mc-world-manager.exe
+          mkdir -p dist
+          go build -ldflags "-s -w -X main.Version=${{ needs.check.outputs.version }}" -o dist/fyne-mc-world-manager.exe
 
       - name: Prepare release package
         shell: bash
         run: |
           VERSION="${{ needs.check.outputs.version }}"
-          mkdir -p release
-          mkdir -p release-portable
+          mkdir -p dist/release
           
-          cp fyne-mc-world-manager.exe release/fyne-mc-world-manager-v${VERSION}-windows-x64.exe
-          cp fyne-mc-world-manager.exe release-portable/fyne-mc-world-manager-v${VERSION}-windows-x64.exe
+          cp dist/fyne-mc-world-manager.exe dist/release/fyne-mc-world-manager-v${VERSION}-windows-x64.exe
 
       - name: Upload exe artifact
         uses: actions/upload-artifact@v4
         with:
           name: fyne-mc-world-manager-v${{ needs.check.outputs.version }}-windows-x64-exe
-          path: release/fyne-mc-world-manager-v${{ needs.check.outputs.version }}-windows-x64.exe
+          path: dist/release/fyne-mc-world-manager-v${{ needs.check.outputs.version }}-windows-x64.exe
 
   release:
     name: Publish Release
